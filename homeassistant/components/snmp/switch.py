@@ -41,6 +41,7 @@ from homeassistant.const import (
     CONF_PAYLOAD_OFF,
     CONF_PAYLOAD_ON,
     CONF_PORT,
+    CONF_UNIQUE_ID,
     CONF_USERNAME,
 )
 from homeassistant.core import HomeAssistant
@@ -124,6 +125,7 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
             MAP_PRIV_PROTOCOLS
         ),
         vol.Optional(CONF_VARTYPE, default=DEFAULT_VARTYPE): cv.string,
+        vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
 )
 
@@ -152,6 +154,7 @@ async def async_setup_platform(
     payload_on: str = config[CONF_PAYLOAD_ON]
     payload_off: str = config[CONF_PAYLOAD_OFF]
     vartype: str = config[CONF_VARTYPE]
+    unique_id = config[CONF_UNIQUE_ID]
 
     if version == "3":
         if not authkey:
@@ -188,6 +191,7 @@ async def async_setup_platform(
                 command_payload_on,
                 command_payload_off,
                 vartype,
+                unique_id,
                 request_args,
                 command_args,
             )
@@ -211,6 +215,7 @@ class SnmpSwitch(SwitchEntity):
         command_payload_on: str | None,
         command_payload_off: str | None,
         vartype: str,
+        unique_id: str,
         request_args: RequestArgsType,
         command_args: CommandArgsType,
     ) -> None:
@@ -228,6 +233,7 @@ class SnmpSwitch(SwitchEntity):
         self._state: bool | None = None
         self._payload_on = payload_on
         self._payload_off = payload_off
+        self._attr_unique_id = unique_id
         self._target = UdpTransportTarget((host, port))
         self._request_args = request_args
         self._command_args = command_args
