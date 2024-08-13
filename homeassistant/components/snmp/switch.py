@@ -102,6 +102,9 @@ MAP_SNMP_VARTYPES = {
     "Unsigned32": Unsigned32,
 }
 
+ADD_CONF_PAYLOAD_OFF = "additional_payload_off"
+ADD_CONF_PAYLOAD_ON = "additional_payload_on"
+
 PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_BASEOID): cv.string,
@@ -111,6 +114,8 @@ PLATFORM_SCHEMA = SWITCH_PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_COMMUNITY, default=DEFAULT_COMMUNITY): cv.string,
         vol.Optional(CONF_HOST, default=DEFAULT_HOST): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(ADD_CONF_PAYLOAD_ON, default=list): list,
+        vol.Optional(ADD_CONF_PAYLOAD_OFF, default=list): list,
         vol.Optional(CONF_PAYLOAD_OFF, default=DEFAULT_PAYLOAD_OFF): cv.string,
         vol.Optional(CONF_PAYLOAD_ON, default=DEFAULT_PAYLOAD_ON): cv.string,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): cv.port,
@@ -154,7 +159,9 @@ async def async_setup_platform(
     payload_on: str = config[CONF_PAYLOAD_ON]
     payload_off: str = config[CONF_PAYLOAD_OFF]
     vartype: str = config[CONF_VARTYPE]
-    unique_id = config[CONF_UNIQUE_ID]
+    unique_id: str = config[CONF_UNIQUE_ID]
+    add_payload_on: list = config[ADD_CONF_PAYLOAD_ON]
+    add_payload_off: list = config[ADD_CONF_PAYLOAD_OFF]
 
     if version == "3":
         if not authkey:
@@ -191,9 +198,11 @@ async def async_setup_platform(
                 command_payload_on,
                 command_payload_off,
                 vartype,
-                unique_id,
                 request_args,
                 command_args,
+                unique_id,
+                add_payload_on,
+                add_payload_off,
             )
         ],
         True,
@@ -215,9 +224,11 @@ class SnmpSwitch(SwitchEntity):
         command_payload_on: str | None,
         command_payload_off: str | None,
         vartype: str,
-        unique_id: str,
         request_args: RequestArgsType,
         command_args: CommandArgsType,
+        unique_id: str,
+        add_payload_on: list,
+        add_payload_off: list,
     ) -> None:
         """Initialize the switch."""
 
@@ -233,6 +244,8 @@ class SnmpSwitch(SwitchEntity):
         self._state: bool | None = None
         self._payload_on = payload_on
         self._payload_off = payload_off
+        self._add_payload_on = add_payload_on
+        self._add_payload_off = add_payload_off
         self._attr_unique_id = unique_id
         self._target = UdpTransportTarget((host, port))
         self._request_args = request_args
@@ -275,11 +288,11 @@ class SnmpSwitch(SwitchEntity):
         else:
             for resrow in restable:
                 if resrow[-1] == self._payload_on or resrow[-1] == Integer(
-                    self._payload_on
+                    self._payload_on or resrow[-1] in self._add_payload_on
                 ):
                     self._state = True
                 elif resrow[-1] == self._payload_off or resrow[-1] == Integer(
-                    self._payload_off
+                    self._payload_off or resrow[-1] in self._add_payload_off
                 ):
                     self._state = False
                 else:
