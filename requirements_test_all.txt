@@ -1354,7 +1354,7 @@ py-nightscout==1.2.2
 py-sucks==0.9.10
 
 # homeassistant.components.synology_dsm
-py-synologydsm-api==2.4.4
+py-synologydsm-api==2.4.5
 
 # homeassistant.components.hdmi_cec
 pyCEC==0.5.2
@@ -1436,7 +1436,7 @@ pycoolmasternet-async==0.2.2
 pycsspeechtts==1.0.8
 
 # homeassistant.components.daikin
-pydaikin==2.13.2
+pydaikin==2.13.4
 
 # homeassistant.components.deconz
 pydeconz==116
@@ -2217,7 +2217,7 @@ twitchAPI==4.2.1
 uasiren==0.0.1
 
 # homeassistant.components.unifiprotect
-uiprotect==6.0.1
+uiprotect==6.0.2
 
 # homeassistant.components.landisgyr_heat_meter
 ultraheat-api==0.5.7
