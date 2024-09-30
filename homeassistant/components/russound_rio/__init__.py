@@ -3,7 +3,8 @@
 import asyncio
 import logging
 
-from aiorussound import Russound
+from aiorussound import RussoundClient, RussoundTcpConnectionHandler
+from aiorussound.models import CallbackType
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
@@ -16,7 +17,7 @@ PLATFORMS = [Platform.MEDIA_PLAYER]
 
 _LOGGER = logging.getLogger(__name__)
 
-type RussoundConfigEntry = ConfigEntry[Russound]
+type RussoundConfigEntry = ConfigEntry[RussoundClient]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> bool:
@@ -24,15 +25,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> 
 
     host = entry.data[CONF_HOST]
     port = entry.data[CONF_PORT]
-    russ = Russound(hass.loop, host, port)
+    client = RussoundClient(RussoundTcpConnectionHandler(host, port))
+
+    async def _connection_update_callback(
+        _client: RussoundClient, _callback_type: CallbackType
+    ) -> None:
+        """Call when the device is notified of changes."""
+        if _callback_type == CallbackType.CONNECTION:
+            if _client.is_connected():
+                _LOGGER.warning("Reconnected to device at %s", entry.data[CONF_HOST])
+            else:
+                _LOGGER.warning("Disconnected from device at %s", entry.data[CONF_HOST])
+
+    await client.register_state_update_callbacks(_connection_update_callback)
 
     try:
         async with asyncio.timeout(CONNECT_TIMEOUT):
-            await russ.connect()
+            await client.connect()
     except RUSSOUND_RIO_EXCEPTIONS as err:
         raise ConfigEntryNotReady(f"Error while connecting to {host}:{port}") from err
-
-    entry.runtime_data = russ
+    entry.runtime_data = client
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -42,6 +54,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: RussoundConfigEntry) -> 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        await entry.runtime_data.close()
+        await entry.runtime_data.disconnect()
 
     return unload_ok
